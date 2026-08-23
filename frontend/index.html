@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Terrier Cyber Quest — AI Cyber-Reasoning Platform</title>
+  <link rel="stylesheet" href="styles.css">
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+</head>
+<body>
+  <!-- Top Navigation -->
+  <header class="navbar">
+    <div class="nav-brand">
+      <div class="logo-icon">🛡️</div>
+      <div class="logo-text">
+        <span class="brand-title">TERRIER CYBER QUEST</span>
+        <span class="brand-badge">AI CYBER-REASONING & CVSS v4.0 PLATFORM</span>
+      </div>
+    </div>
+    <div class="nav-actions">
+      <span class="auth-notice">⚠️ AUTHORIZED AUDIT MODE (IST: UTC+05:30)</span>
+      <button class="btn btn-secondary" id="history-btn">📁 Scan History</button>
+      <button class="btn btn-secondary" id="model-info-btn">🧠 ML Model Info</button>
+    </div>
+  </header>
+
+  <main class="container">
+    <!-- Target Configuration Section -->
+    <section class="card config-card">
+      <div class="card-header">
+        <h2>Target & Scope Configuration</h2>
+        <span class="badge badge-scope">Scope Enforced</span>
+      </div>
+      <div class="config-grid">
+        <div class="form-group main-target">
+          <label for="target-url">Authorized Target URL</label>
+          <div class="input-with-action">
+            <input type="url" id="target-url" placeholder="http://127.0.0.1:5000" value="http://127.0.0.1:5000">
+            <button class="btn btn-primary" id="start-scan-btn">⚡ Start Autonomous Scan</button>
+            <button class="btn btn-danger" id="stop-scan-btn" style="display: none;">⏹️ Terminate Scan</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Expandable Advanced Scope & Auth Details -->
+      <details class="advanced-settings">
+        <summary>Advanced Scope & Authentication Settings</summary>
+        <div class="advanced-grid">
+          <div class="form-group">
+            <label for="allowed-domains">Allowed Domains (comma-separated)</label>
+            <input type="text" id="allowed-domains" placeholder="127.0.0.1, localhost">
+          </div>
+          <div class="form-group">
+            <label for="max-depth">Max Crawl Depth</label>
+            <input type="number" id="max-depth" value="3" min="1" max="10">
+          </div>
+          <div class="form-group">
+            <label for="max-pages">Max Pages</label>
+            <input type="number" id="max-pages" value="30" min="1" max="100">
+          </div>
+          <div class="form-group">
+            <label for="bearer-token">Bearer Token</label>
+            <input type="text" id="bearer-token" placeholder="Optional bearer token...">
+          </div>
+          <div class="form-group full-width">
+            <label for="custom-cookies">Session Cookie String</label>
+            <input type="text" id="custom-cookies" placeholder="sessionid=abc123; role=admin">
+          </div>
+        </div>
+      </details>
+    </section>
+
+    <!-- Scan Progress Stepper -->
+    <section class="card progress-card" id="progress-section" style="display: none;">
+      <div class="card-header">
+        <div class="progress-title">
+          <span class="spinner" id="scan-spinner"></span>
+          <h2 id="stage-title">Scanner Initializing...</h2>
+        </div>
+        <div class="header-action-group">
+          <button class="btn btn-danger" id="header-stop-btn">⏹️ Terminate Process</button>
+          <div class="export-actions" id="export-group" style="display: none;">
+            <button class="btn btn-export" id="export-pdf-btn">📄 Export PDF Report</button>
+            <button class="btn btn-export" id="export-json-btn">💾 Export JSON</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Live Activity Bar with Dynamic ETA -->
+      <div class="live-activity-bar" id="live-activity-bar">
+        <div class="activity-metric">
+          <span class="activity-lbl">Requests Sent:</span>
+          <span class="activity-val" id="live-req-count">0</span>
+        </div>
+        <div class="activity-metric">
+          <span class="activity-lbl">⏳ ETA:</span>
+          <span class="activity-val text-yellow" id="live-eta">Calculating...</span>
+        </div>
+        <div class="activity-metric flex-1">
+          <span class="activity-lbl">Live Operation:</span>
+          <span class="activity-val text-cyan" id="live-activity-desc">Initializing autonomous pipeline...</span>
+        </div>
+        <div class="activity-metric">
+          <span class="activity-lbl">Severity Engine:</span>
+          <span class="activity-val text-green">CVSS v4.0</span>
+        </div>
+      </div>
+      
+      <!-- Stepper Pipeline -->
+      <div class="pipeline-stepper">
+        <div class="step" id="step-crawl">
+          <div class="step-num">1</div>
+          <div class="step-label">Web Crawl & Discovery</div>
+        </div>
+        <div class="step" id="step-static">
+          <div class="step-num">2</div>
+          <div class="step-label">Static Analysis</div>
+        </div>
+        <div class="step" id="step-fuzz">
+          <div class="step-num">3</div>
+          <div class="step-label">Dynamic Probing</div>
+        </div>
+        <div class="step" id="step-ml">
+          <div class="step-num">4</div>
+          <div class="step-label">ML Classification</div>
+        </div>
+        <div class="step" id="step-reason">
+          <div class="step-num">5</div>
+          <div class="step-label">Gemini & CVSS v4.0</div>
+        </div>
+        <div class="step" id="step-done">
+          <div class="step-num">6</div>
+          <div class="step-label">Report & Remediation</div>
+        </div>
+      </div>
+
+      <div class="live-log-box" id="live-log">
+        <div class="log-line info">[INIT] Ready to scan authorized target.</div>
+      </div>
+    </section>
+
+    <!-- Metrics Summary Cards -->
+    <section class="metrics-grid" id="metrics-section" style="display: none;">
+      <div class="metric-card">
+        <div class="metric-val" id="metric-endpoints">0</div>
+        <div class="metric-lbl">Discovered Endpoints</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-val" id="metric-requests">0</div>
+        <div class="metric-lbl">HTTP Requests Sent</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-val" id="metric-findings">0</div>
+        <div class="metric-lbl">Total Findings</div>
+      </div>
+      <div class="metric-card critical">
+        <div class="metric-val" id="metric-critical">0</div>
+        <div class="metric-lbl">CVSS 9.0–10.0 (Critical)</div>
+      </div>
+      <div class="metric-card high">
+        <div class="metric-val" id="metric-high">0</div>
+        <div class="metric-lbl">CVSS 7.0–8.9 (High)</div>
+      </div>
+      <div class="metric-card fixed">
+        <div class="metric-val" id="metric-fixed">0</div>
+        <div class="metric-lbl">Verified Staging Fixes</div>
+      </div>
+    </section>
+
+    <!-- Main Content Layout (Findings & Endpoints) -->
+    <div class="results-layout" id="results-layout" style="display: none;">
+      <!-- Findings Column -->
+      <div class="findings-container">
+        <div class="section-title-bar">
+          <h3>Vulnerability Findings & CVSS v4.0 Cyber-Reasoning Dashboard</h3>
+          <div class="filter-controls">
+            <select id="severity-filter">
+              <option value="ALL">All Severities</option>
+              <option value="CRITICAL">Critical (9.0–10.0)</option>
+              <option value="HIGH">High (7.0–8.9)</option>
+              <option value="MEDIUM">Medium (4.0–6.9)</option>
+              <option value="LOW">Low (0.1–3.9)</option>
+            </select>
+          </div>
+        </div>
+
+        <div id="findings-list" class="findings-list">
+          <!-- Dynamic Finding Cards will be inserted here -->
+        </div>
+      </div>
+
+      <!-- Discovered Surfaces Sidebar -->
+      <aside class="sidebar-container">
+        <div class="section-title-bar">
+          <h3>Discovered Attack Surfaces</h3>
+          <span class="badge" id="surface-count">0 Endpoints</span>
+        </div>
+        <div class="surface-list" id="surface-list">
+          <!-- Discovered endpoints items -->
+        </div>
+      </aside>
+    </div>
+  </main>
+
+  <!-- Patching & Regression Testing Modal -->
+  <div class="modal-overlay" id="patch-modal" style="display: none;">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3 id="patch-modal-title">Autonomous Staging Patch & Regression Harness</h3>
+        <button class="modal-close" id="close-patch-modal">&times;</button>
+      </div>
+      <div class="modal-body">
+        <!-- Target Association Details -->
+        <div class="patch-meta-box" id="patch-meta-box">
+          <div class="patch-meta-item"><strong>Vulnerability:</strong> <span id="patch-vuln-type">Loading...</span></div>
+          <div class="patch-meta-item"><strong>CVSS v4.0:</strong> <span id="patch-cvss-score" class="text-yellow">--</span></div>
+          <div class="patch-meta-item"><strong>Affected Endpoint:</strong> <code id="patch-endpoint-url">--</code></div>
+          <div class="patch-meta-item"><strong>Parameter:</strong> <code id="patch-parameter">--</code></div>
+        </div>
+
+        <div class="staging-file-selector">
+          <label for="staging-file-input">Target Staging Source File Path:</label>
+          <input type="text" id="staging-file-input" value="sample_vulnerable_app/app.py">
+          <button class="btn btn-secondary" id="preview-patch-btn">🔄 Regenerate Patch</button>
+        </div>
+
+        <!-- Copyable Clean Code Snippet -->
+        <div class="snippet-container">
+          <div class="snippet-header">
+            <h4>Copyable Remediation Snippet</h4>
+            <button class="btn btn-copy" id="copy-patch-btn">📋 Copy Patch</button>
+          </div>
+          <pre id="clean-patch-snippet" class="code-snippet">Generating copyable remediation fix...</pre>
+        </div>
+
+        <!-- Unified Diff Box -->
+        <div class="diff-container">
+          <h4>Unified Diff Preview</h4>
+          <pre id="diff-output" class="code-diff">Click "Regenerate Patch" to inspect proposed code changes...</pre>
+        </div>
+
+        <div class="patch-actions">
+          <button class="btn btn-primary" id="apply-patch-btn" disabled>🛠️ Apply Patch to Staging</button>
+          <button class="btn btn-success" id="verify-regression-btn" disabled>🧪 Execute Regression Test Harness</button>
+        </div>
+
+        <div class="regression-results-box" id="regression-box" style="display: none;">
+          <h4>Regression Verification Verdict</h4>
+          <div class="verdict-banner" id="verdict-banner">PENDING</div>
+          <p id="verdict-explanation"></p>
+          <div class="evidence-box" id="regression-evidence-box" style="display:none; margin-top:8px; font-family:'JetBrains Mono',monospace; font-size:0.8rem; background:#0b1120; padding:8px; border-radius:4px;"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Scan History Modal -->
+  <div class="modal-overlay" id="history-modal" style="display: none;">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3>Previous Scan Audits (IST Timestamps)</h3>
+        <button class="modal-close" id="close-history-modal">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div id="history-list" class="history-list">
+          Loading history...
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Model Info Modal -->
+  <div class="modal-overlay" id="model-modal" style="display: none;">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3>ML Vulnerability Classifier Benchmark Telemetry</h3>
+        <button class="modal-close" id="close-model-modal">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div id="model-metrics-content">Loading model metrics...</div>
+      </div>
+    </div>
+  </div>
+
+  <script src="app.js?v=2.2"></script>
+</body>
+</html>

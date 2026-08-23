@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Authorized Staging Target Application</title>
+  <!-- Exposed development comment: TODO: remove admin test credentials admin/supersecret -->
+  <style>
+    body { font-family: sans-serif; margin: 40px; background: #f4f4f9; }
+    .card { background: white; padding: 20px; border-radius: 8px; margin-bottom: 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+    input, button { padding: 8px; margin: 5px 0; }
+  </style>
+</head>
+<body>
+  <h1>Authorized Staging Test Target</h1>
+  <p>This staging application is designed for authorized testing of the Terrier Cyber Quest Scanner.</p>
+  
+  <div class="card">
+    <h3>User Search (SQLi Probe Target)</h3>
+    <form action="/search" method="GET">
+      <label>Search Username: </label>
+      <input type="text" name="username" value="alice">
+      <button type="submit">Search</button>
+    </form>
+  </div>
+
+  <div class="card">
+    <h3>Greeting Generator (Reflected XSS Probe Target)</h3>
+    <form action="/greet" method="GET">
+      <label>Enter Name: </label>
+      <input type="text" name="name" value="Guest">
+      <button type="submit">Greet</button>
+    </form>
+  </div>
+
+  <div class="card">
+    <h3>File Viewer (Directory Traversal Target)</h3>
+    <form action="/view" method="GET">
+      <label>File Name: </label>
+      <input type="text" name="file" value="welcome.txt">
+      <button type="submit">View File</button>
+    </form>
+  </div>
+
+  <div class="card">
+    <h3>System Diagnostic Ping (Command Injection Target)</h3>
+    <form action="/ping" method="POST">
+      <label>Host Address: </label>
+      <input type="text" name="host" value="127.0.0.1">
+      <button type="submit">Run Diagnostic</button>
+    </form>
+  </div>
+
+  <div class="card">
+    <h3>External Redirector (Open Redirect Target)</h3>
+    <a href="/redirect?url=https://example.com">Visit Partner Portal</a>
+  </div>
+
+  <script>
+    // Client-side API key configuration for static audit test
+    const CONFIG = {
+      apiKey: "AIzaSyD918374918237498172398471928374918",
+      endpoint: "/api/status"
+    };
+    console.log("Staging client script initialized.");
+  </script>
+</body>
+</html>

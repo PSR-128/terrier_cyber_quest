@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Source Code Explorer &bull; Trial Vulnerable App</title>
+  <style>
+    :root {
+      --bg: #0f172a;
+      --sidebar: #1e293b;
+      --code-bg: #020617;
+      --text: #f8fafc;
+      --text-muted: #94a3b8;
+      --border: #334155;
+      --accent: #38bdf8;
+      --active: #2563eb;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+      overflow: hidden;
+    }
+    .top-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 12px 24px;
+      background: var(--sidebar);
+      border-bottom: 1px solid var(--border);
+    }
+    .top-bar h1 { font-size: 18px; display: flex; align-items: center; gap: 8px; }
+    .back-link {
+      color: #94a3b8;
+      text-decoration: none;
+      font-size: 14px;
+      padding: 6px 12px;
+      border-radius: 4px;
+      background: #334155;
+      transition: background 0.2s;
+    }
+    .back-link:hover { background: #475569; color: #fff; }
+    .main-layout {
+      display: flex;
+      flex: 1;
+      overflow: hidden;
+    }
+    .sidebar {
+      width: 240px;
+      background: var(--sidebar);
+      border-right: 1px solid var(--border);
+      padding: 15px 10px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .sidebar h4 {
+      font-size: 11px;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      margin-bottom: 8px;
+      padding-left: 8px;
+    }
+    .file-item {
+      padding: 8px 12px;
+      border-radius: 6px;
+      color: var(--text);
+      text-decoration: none;
+      font-size: 13px;
+      cursor: pointer;
+      font-family: monospace;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      transition: background 0.15s;
+    }
+    .file-item:hover { background: rgba(255, 255, 255, 0.05); }
+    .file-item.active { background: var(--active); color: #fff; font-weight: 600; }
+    .content-area {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      background: var(--code-bg);
+      overflow: hidden;
+    }
+    .content-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 10px 20px;
+      background: #0b1120;
+      border-bottom: 1px solid var(--border);
+      font-size: 13px;
+    }
+    .content-header .file-info {
+      font-family: monospace;
+      color: var(--accent);
+      font-weight: bold;
+    }
+    .code-container {
+      flex: 1;
+      overflow: auto;
+      padding: 20px;
+    }
+    pre {
+      font-family: "Fira Code", Consolas, Monaco, "Courier New", monospace;
+      font-size: 13px;
+      line-height: 1.6;
+      color: #e2e8f0;
+      white-space: pre-wrap;
+      word-break: break-all;
+    }
+    .copy-btn {
+      background: #1e293b;
+      border: 1px solid var(--border);
+      color: #cbd5e1;
+      padding: 5px 10px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 12px;
+    }
+    .copy-btn:hover { background: #334155; }
+  </style>
+</head>
+<body>
+
+  <div class="top-bar">
+    <h1>
+      <span>&lt;/&gt;</span>
+      <span>Trial Vulnerable App &bull; Source Code Inspector</span>
+    </h1>
+    <a href="/" class="back-link">&larr; Back to App Dashboard</a>
+  </div>
+
+  <div class="main-layout">
+    <div class="sidebar">
+      <h4>Source Code Files</h4>
+      <div class="file-item active" onclick="loadFile('app.py', this)">📄 app.py</div>
+      <div class="file-item" onclick="loadFile('index.html', this)">📄 index.html</div>
+      <div class="file-item" onclick="loadFile('source_viewer.html', this)">📄 source_viewer.html</div>
+      
+      <h4 style="margin-top: 15px;">Staging Data Files</h4>
+      <div class="file-item" onclick="loadFile('sample.txt', this)">📝 sample.txt</div>
+      <div class="file-item" onclick="loadFile('config.txt', this)">📝 config.txt</div>
+    </div>
+
+    <div class="content-area">
+      <div class="content-header">
+        <span class="file-info" id="currentFileName">trial_vulnerable_app/app.py</span>
+        <div>
+          <span id="lineCount" style="color: var(--text-muted); margin-right: 15px;">Loading lines...</span>
+          <button class="copy-btn" onclick="copySource()">Copy Raw Code</button>
+        </div>
+      </div>
+      <div class="code-container">
+        <pre id="codeView">Loading source code from server...</pre>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let currentRawCode = "";
+
+    async function loadFile(filename, element) {
+      if (element) {
+        document.querySelectorAll('.file-item').forEach(el => el.classList.remove('active'));
+        element.classList.add('active');
+      }
+
+      document.getElementById('currentFileName').textContent = `trial_vulnerable_app/${filename}`;
+      document.getElementById('codeView').textContent = 'Loading...';
+
+      try {
+        const resp = await fetch(`/api/source?file=${encodeURIComponent(filename)}`);
+        const data = await resp.json();
+        if (data.content) {
+          currentRawCode = data.content;
+          document.getElementById('codeView').textContent = data.content;
+          document.getElementById('lineCount').textContent = `${data.line_count} lines`;
+        } else {
+          document.getElementById('codeView').textContent = data.error || 'Error loading file';
+        }
+      } catch (err) {
+        document.getElementById('codeView').textContent = `Network error fetching source code: ${err}`;
+      }
+    }
+
+    function copySource() {
+      navigator.clipboard.writeText(currentRawCode).then(() => {
+        alert("Source code copied to clipboard!");
+      });
+    }
+
+    // Auto-load app.py on initial page load
+    window.addEventListener('DOMContentLoaded', () => {
+      loadFile('app.py', null);
+    });
+  </script>
+</body>
+</html>

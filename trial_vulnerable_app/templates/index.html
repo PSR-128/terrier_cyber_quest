@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Trial Vulnerable Web Application (CVSS 4.0 Testbed)</title>
+  <!-- Exposed development comment for Static Analysis: TODO: remove staging administrator credentials admin / TrialStagingAdmin2026! -->
+  <style>
+    :root {
+      --bg: #0f172a;
+      --card-bg: #1e293b;
+      --text: #f8fafc;
+      --text-muted: #94a3b8;
+      --border: #334155;
+      --critical: #ef4444;
+      --high: #f97316;
+      --medium: #eab308;
+      --low: #3b82f6;
+      --accent: #10b981;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+      padding: 30px;
+    }
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 25px;
+      padding-bottom: 20px;
+      border-bottom: 1px solid var(--border);
+    }
+    .header h1 { font-size: 24px; color: #fff; }
+    .header p { color: var(--text-muted); font-size: 14px; margin-top: 4px; }
+    .nav-btn {
+      background: #2563eb;
+      color: #fff;
+      padding: 10px 18px;
+      border-radius: 6px;
+      text-decoration: none;
+      font-weight: 600;
+      font-size: 14px;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      transition: background 0.2s;
+    }
+    .nav-btn:hover { background: #1d4ed8; }
+    .stats-bar {
+      display: flex;
+      gap: 15px;
+      margin-bottom: 30px;
+    }
+    .stat-pill {
+      flex: 1;
+      padding: 12px;
+      border-radius: 6px;
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      text-align: center;
+    }
+    .stat-pill strong { display: block; font-size: 18px; }
+    .badge {
+      display: inline-block;
+      padding: 3px 8px;
+      border-radius: 4px;
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      margin-bottom: 8px;
+    }
+    .badge-critical { background: rgba(239, 68, 68, 0.2); color: var(--critical); border: 1px solid var(--critical); }
+    .badge-high { background: rgba(249, 115, 22, 0.2); color: var(--high); border: 1px solid var(--high); }
+    .badge-medium { background: rgba(234, 179, 8, 0.2); color: var(--medium); border: 1px solid var(--medium); }
+    .badge-low { background: rgba(59, 130, 246, 0.2); color: var(--low); border: 1px solid var(--low); }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(360px, 1fr));
+      gap: 20px;
+    }
+    .card {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 20px;
+    }
+    .card h3 { font-size: 17px; margin-bottom: 8px; }
+    .card p { font-size: 13px; color: var(--text-muted); margin-bottom: 15px; }
+    form { display: flex; flex-direction: column; gap: 10px; }
+    label { font-size: 12px; font-weight: 600; color: var(--text-muted); }
+    input[type="text"] {
+      background: #0f172a;
+      border: 1px solid var(--border);
+      color: #fff;
+      padding: 8px 12px;
+      border-radius: 4px;
+      font-family: monospace;
+      font-size: 13px;
+    }
+    button, input[type="submit"] {
+      background: #334155;
+      color: #fff;
+      border: none;
+      padding: 8px 14px;
+      border-radius: 4px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      align-self: flex-start;
+      transition: background 0.2s;
+    }
+    button:hover, input[type="submit"]:hover { background: #475569; }
+    .card a.test-link {
+      display: inline-block;
+      color: #38bdf8;
+      font-size: 13px;
+      text-decoration: none;
+      word-break: break-all;
+    }
+    .card a.test-link:hover { text-decoration: underline; }
+    code { background: #0f172a; padding: 2px 6px; border-radius: 4px; color: #38bdf8; font-size: 12px; }
+  </style>
+</head>
+<body>
+
+  <div class="header">
+    <div>
+      <h1>Trial Vulnerable Web Application</h1>
+      <p>CVSS 4.0 Aligned Security Testing Target &bull; Exactly 2 Vulnerabilities per Severity Tier (8 Total)</p>
+    </div>
+    <div>
+      <a href="/source" class="nav-btn">&lt;/&gt; Source Code Explorer</a>
+    </div>
+  </div>
+
+  <div class="stats-bar">
+    <div class="stat-pill" style="border-top: 3px solid var(--critical);">
+      <span class="badge badge-critical">Critical (CVSS 9.0-10.0)</span>
+      <strong>2 Endpoints</strong>
+      <small style="color:var(--text-muted); font-size:11px;">Command Injection, SQLi</small>
+    </div>
+    <div class="stat-pill" style="border-top: 3px solid var(--high);">
+      <span class="badge badge-high">High (CVSS 7.0-8.9)</span>
+      <strong>2 Endpoints</strong>
+      <small style="color:var(--text-muted); font-size:11px;">Path Traversal, SSRF</small>
+    </div>
+    <div class="stat-pill" style="border-top: 3px solid var(--medium);">
+      <span class="badge badge-medium">Medium (CVSS 4.0-6.9)</span>
+      <strong>2 Endpoints</strong>
+      <small style="color:var(--text-muted); font-size:11px;">Reflected XSS, Open Redirect</small>
+    </div>
+    <div class="stat-pill" style="border-top: 3px solid var(--low);">
+      <span class="badge badge-low">Low (CVSS 0.1-3.9)</span>
+      <strong>2 Findings</strong>
+      <small style="color:var(--text-muted); font-size:11px;">Missing Headers, Info Exposure</small>
+    </div>
+  </div>
+
+  <div class="grid">
+
+    <!-- 1. CRITICAL: Command Injection -->
+    <div class="card">
+      <span class="badge badge-critical">Critical &bull; CVSS 10.0</span>
+      <h3>1. System Diagnostic Ping (Command Injection)</h3>
+      <p>Host parameter is passed to system shell without sanitization. Try <code>127.0.0.1; echo tcq_audit_probe;</code></p>
+      <form action="/api/tools/ping" method="POST">
+        <label>Target Host Address:</label>
+        <input type="text" name="host" value="127.0.0.1">
+        <button type="submit">Execute Diagnostic Ping</button>
+      </form>
+    </div>
+
+    <!-- 2. CRITICAL: SQL Injection -->
+    <div class="card">
+      <span class="badge badge-critical">Critical &bull; CVSS 9.3</span>
+      <h3>2. User Lookup (SQL Injection)</h3>
+      <p>Unsanitized username parameter concatenated into SQLite query. Try <code>alice' OR '1'='1</code></p>
+      <form action="/api/users/search" method="GET">
+        <label>Search Username:</label>
+        <input type="text" name="username" value="alice">
+        <button type="submit">Search Database</button>
+      </form>
+    </div>
+
+    <!-- 3. HIGH: Path Traversal -->
+    <div class="card">
+      <span class="badge badge-high">High &bull; CVSS 8.7</span>
+      <h3>3. Document Viewer (Path Traversal)</h3>
+      <p>Relative path parameter resolved directly. Try <code>../../../../etc/passwd</code> or <code>sample.txt</code></p>
+      <form action="/api/files/view" method="GET">
+        <label>File Path to Read:</label>
+        <input type="text" name="file" value="sample.txt">
+        <button type="submit">Fetch File Contents</button>
+      </form>
+    </div>
+
+    <!-- 4. HIGH: SSRF -->
+    <div class="card">
+      <span class="badge badge-high">High &bull; CVSS 8.7</span>
+      <h3>4. Proxy Webhook Fetcher (SSRF)</h3>
+      <p>Server dispatches requests to arbitrary external or loopback URLs. Try <code>http://127.0.0.1:80/</code></p>
+      <form action="/api/proxy/fetch" method="POST">
+        <label>Webhook URL:</label>
+        <input type="text" name="target_url" value="http://127.0.0.1:80/">
+        <button type="submit">Dispatch Webhook</button>
+      </form>
+    </div>
+
+    <!-- 5. MEDIUM: Reflected XSS -->
+    <div class="card">
+      <span class="badge badge-medium">Medium &bull; CVSS 6.9</span>
+      <h3>5. User Greeting (Reflected XSS)</h3>
+      <p>Reflects raw user input directly into HTML body. Try <code>&lt;tcqcanary data='tcq_audit_probe'&gt;</code></p>
+      <form action="/greet" method="GET">
+        <label>Visitor Name:</label>
+        <input type="text" name="name" value="Guest">
+        <button type="submit">Generate Greeting</button>
+      </form>
+    </div>
+
+    <!-- 6. MEDIUM: Open Redirect -->
+    <div class="card">
+      <span class="badge badge-medium">Medium &bull; CVSS 5.1</span>
+      <h3>6. External Navigation Link (Open Redirect)</h3>
+      <p>Redirects browser to any arbitrary destination without origin whitelist check.</p>
+      <p style="margin-top: 10px;">
+        <a href="/redirect?url=https://example.com/tcq-redirect-check" class="test-link">
+          &rarr; Test Redirection: /redirect?url=https://example.com/tcq-redirect-check
+        </a>
+      </p>
+    </div>
+
+    <!-- 7. LOW: Missing Security Headers -->
+    <div class="card">
+      <span class="badge badge-low">Low &bull; CVSS 2.3</span>
+      <h3>7. Missing Defensive Security Headers</h3>
+      <p>All HTTP responses omit <code>Content-Security-Policy</code>, <code>X-Content-Type-Options</code>, <code>X-Frame-Options</code>, and <code>HSTS</code> headers.</p>
+      <p><small style="color:var(--text-muted);">Auditable by inspecting HTTP response headers with the static analyzer.</small></p>
+    </div>
+
+    <!-- 8. LOW: Information Disclosure -->
+    <div class="card">
+      <span class="badge badge-low">Low &bull; CVSS 3.1</span>
+      <h3>8. Information Disclosure in Client Code</h3>
+      <p>Client HTML contains exposed developer TODO comments with mock administrator passwords and client config tokens.</p>
+      <p><small style="color:var(--text-muted);">Inspect HTML page source to view the exposed comments and script variables.</small></p>
+    </div>
+
+  </div>
+
+  <script>
+    // Exposed client-side API configuration for static vulnerability scanner detection
+    const TRIAL_CLIENT_CONFIG = {
+      apiKey: "AIzaSyTrialTestKey_98237498237492837498",
+      environment: "trial_staging",
+      apiStatusEndpoint: "/api/health"
+    };
+    console.log("Trial vulnerable test application ready.");
+  </script>
+</body>
+</html>
