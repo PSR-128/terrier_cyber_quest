@@ -9,9 +9,9 @@ from typing import List, Dict, Any, Optional
 class ScopeConfigSchema(BaseModel):
     allowed_domains: Optional[List[str]] = None
     allow_subdomains: bool = True
-    max_depth: int = Field(default=3, ge=1, le=10)
-    max_pages: int = Field(default=30, ge=1, le=200)
-    max_duration_sec: int = Field(default=180, ge=10, le=1200)
+    max_depth: int = Field(default=0, ge=0, le=100)       # 0 = unlimited
+    max_pages: int = Field(default=0, ge=0, le=100000)    # 0 = unlimited
+    max_duration_sec: int = Field(default=600, ge=10, le=7200)
 
 
 class AuthConfigSchema(BaseModel):

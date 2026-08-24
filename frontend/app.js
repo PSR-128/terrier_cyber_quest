@@ -1,4 +1,5 @@
-// Terrier Cyber Quest — Interactive Dashboard Logic with CVSS v4.0, IST Timestamps, and Copyable Staging Patches
+// Terrier Cyber Quest — Interactive Dashboard Logic
+// CVSS v4.0, IST Timestamps, Smooth Progress, Toast Notifications
 
 let currentScanId = null;
 let currentScanData = null;
@@ -6,6 +7,7 @@ let ws = null;
 let activeFindingForPatch = null;
 let generatedPatchData = null;
 let totalRequestsCount = 0;
+let scanProgress = 0;
 
 // IST Timezone Formatter Utility
 function formatIST(dateOrIso, includeSeconds = true) {
@@ -40,6 +42,33 @@ function formatISTTimeOnly(dateOrIso = new Date()) {
     }).format(d) + " IST";
   } catch (e) {
     return new Date().toLocaleTimeString();
+  }
+}
+
+// Toast Notification System
+function showToast(message, type = "info") {
+  const container = document.getElementById("toast-container");
+  if (!container) return;
+  const toast = document.createElement("div");
+  toast.className = `toast ${type}`;
+  toast.textContent = message;
+  container.appendChild(toast);
+  setTimeout(() => {
+    if (toast.parentNode) toast.parentNode.removeChild(toast);
+  }, 4000);
+}
+
+// Smooth Progress Bar
+function setProgress(percent) {
+  scanProgress = Math.min(100, Math.max(0, percent));
+  const fill = document.getElementById("progress-fill");
+  if (fill) {
+    fill.style.width = `${scanProgress}%`;
+    if (scanProgress >= 100) {
+      fill.classList.add("complete");
+    } else {
+      fill.classList.remove("complete");
+    }
   }
 }
 
@@ -104,12 +133,27 @@ const steps = {
   DONE: document.getElementById("step-done")
 };
 
+const stageProgressMap = {
+  CRAWLING: [0, 20],
+  STATIC_ANALYSIS: [20, 35],
+  DYNAMIC_FUZZING_AND_ML: [35, 75],
+  ML_CLASSIFICATION: [75, 85],
+  CYBER_REASONING: [85, 92],
+  DONE: [92, 100]
+};
+
 function addLog(msg, type = "info") {
   const line = document.createElement("div");
   line.className = `log-line ${type}`;
   line.textContent = `[${formatISTTimeOnly()}] ${msg}`;
   liveLog.appendChild(line);
   liveLog.scrollTop = liveLog.scrollHeight;
+}
+
+function updateStepStatus(stepEl, status) {
+  if (!stepEl) return;
+  const statusEl = stepEl.querySelector(".step-status");
+  if (statusEl) statusEl.textContent = status;
 }
 
 function updateStepper(activeStage) {
@@ -120,12 +164,25 @@ function updateStepper(activeStage) {
     if (!el) continue;
     if (k === activeStage) {
       el.className = "step active";
+      updateStepStatus(el, "Running...");
       passed = false;
     } else if (passed) {
       el.className = "step completed";
+      updateStepStatus(el, "✓ Complete");
     } else {
       el.className = "step";
+      updateStepStatus(el, "Pending");
     }
+  }
+}
+
+function markAllStepsComplete() {
+  const stageKeys = ["CRAWLING", "STATIC_ANALYSIS", "DYNAMIC_FUZZING_AND_ML", "ML_CLASSIFICATION", "CYBER_REASONING", "DONE"];
+  for (const k of stageKeys) {
+    const el = steps[k];
+    if (!el) continue;
+    el.className = "step completed";
+    updateStepStatus(el, "✓ Complete");
   }
 }
 
@@ -136,18 +193,36 @@ function resetScanControls() {
   headerStopBtn.style.display = "none";
   document.getElementById("scan-spinner").style.display = "none";
   exportGroup.style.display = "flex";
-  liveEta.textContent = "Completed / Idle";
+  liveEta.textContent = "Completed";
 }
+
+function markScanFullyComplete() {
+  setProgress(100);
+  markAllStepsComplete();
+  stageTitle.textContent = "Scan Complete — All Results Available";
+  liveActivityDesc.textContent = "All findings loaded in dashboard.";
+  resetScanControls();
+}
+
+// Keyboard shortcut: Ctrl+Enter to start scan
+targetUrlInput.addEventListener("keydown", (e) => {
+  if (e.ctrlKey && e.key === "Enter") {
+    startScanBtn.click();
+  }
+});
 
 // Start Scan Action
 startScanBtn.addEventListener("click", async () => {
   const targetUrl = targetUrlInput.value.trim();
   if (!targetUrl) {
-    alert("Please enter a valid authorized target URL.");
+    showToast("Please enter a valid authorized target URL.", "error");
     return;
   }
 
   totalRequestsCount = 0;
+  scanProgress = 0;
+  setProgress(0);
+
   startScanBtn.style.display = "none";
   stopScanBtn.style.display = "inline-flex";
   headerStopBtn.style.display = "inline-flex";
@@ -161,12 +236,23 @@ startScanBtn.addEventListener("click", async () => {
   surfaceList.innerHTML = "";
   liveLog.innerHTML = "";
 
+  // Reset all step statuses
+  Object.values(steps).forEach(el => {
+    if (el) {
+      el.className = "step";
+      updateStepStatus(el, "Pending");
+    }
+  });
+
+  // Scroll progress section into view
+  progressSection.scrollIntoView({ behavior: "smooth", block: "start" });
+
   addLog(`Initiating authorized scan on: ${targetUrl}`);
 
   const allowedDomainsStr = document.getElementById("allowed-domains").value.trim();
   const allowedDomains = allowedDomainsStr ? allowedDomainsStr.split(",").map(s => s.trim()) : null;
-  const maxDepth = parseInt(document.getElementById("max-depth").value) || 3;
-  const maxPages = parseInt(document.getElementById("max-pages").value) || 30;
+  const maxDepth = parseInt(document.getElementById("max-depth").value) || 0;
+  const maxPages = parseInt(document.getElementById("max-pages").value) || 0;
   const bearerToken = document.getElementById("bearer-token").value.trim() || null;
   const customCookiesStr = document.getElementById("custom-cookies").value.trim();
 
@@ -204,6 +290,7 @@ startScanBtn.addEventListener("click", async () => {
     connectWebSocket(currentScanId);
   } catch (err) {
     addLog(`Error initiating scan: ${err.message}`, "warn");
+    showToast(`Scan failed to start: ${err.message}`, "error");
     resetScanControls();
   }
 });
@@ -214,16 +301,18 @@ async function terminateScan() {
     resetScanControls();
     return;
   }
-  addLog("Termination request received. Halting background scan workers and releasing resources...", "warn");
+  addLog("Termination request received. Halting background scan workers...", "warn");
   stageTitle.textContent = "Scan Terminated by User";
   liveEta.textContent = "Terminated";
   resetScanControls();
   updateStepper("DONE");
+  updateStepStatus(steps.DONE, "Terminated");
 
   try {
     const resp = await fetch(`/api/scan/${currentScanId}/stop`, { method: "POST" });
     const result = await resp.json();
     addLog(`Process state: ${result.message}`, "warn");
+    showToast("Scan terminated successfully.", "warn");
     fetchFullScan(currentScanId);
   } catch (e) {
     addLog(`Termination note: ${e.message}`, "warn");
@@ -239,7 +328,7 @@ function connectWebSocket(scanId) {
   ws = new WebSocket(wsUrl);
 
   ws.onopen = () => {
-    addLog("Real-time telemetry stream established (IST UTC+05:30).");
+    addLog("Real-time telemetry stream established.");
   };
 
   ws.onmessage = (event) => {
@@ -265,7 +354,7 @@ async function pollScanStatus(scanId) {
     renderFullScanData(data);
     if (data.status === "COMPLETED" || data.status === "FAILED" || data.status === "STOPPED") {
       clearInterval(interval);
-      resetScanControls();
+      markScanFullyComplete();
     }
   }, 2000);
 }
@@ -280,17 +369,38 @@ function handleScanEvent(evt, data) {
     updateStepper(data.stage);
     liveActivityDesc.textContent = data.message;
     addLog(data.message);
+
+    // Update progress to stage start
+    const range = stageProgressMap[data.stage];
+    if (range) setProgress(range[0]);
   } else if (evt === "crawler_crawl_page") {
     totalRequestsCount = data.total_requests || (totalRequestsCount + 1);
     liveReqCount.textContent = totalRequestsCount;
     document.getElementById("metric-requests").textContent = totalRequestsCount;
     liveActivityDesc.textContent = `Crawled: ${data.url} (Depth ${data.depth}, Visited ${data.visited_count})`;
     addLog(`Crawled page: ${data.url} (Depth ${data.depth})`);
+
+    // Smooth crawl progress (0-20% range)
+    const crawlProg = Math.min(data.visited_count * 2, 20);
+    setProgress(crawlProg);
+  } else if (evt === "crawler_crawl_completed") {
+    // Display crawl completion reason
+    const reason = data.reason;
+    if (reason === "exhausted") {
+      addLog("Crawl complete — all reachable pages discovered.", "info");
+    } else if (reason === "page_limit") {
+      addLog(`Crawl stopped — page limit reached (${data.pages_visited} pages, ${data.queue_remaining} URLs remaining in queue).`, "warn");
+    } else if (reason === "duration_limit") {
+      addLog(`Crawl stopped — duration limit reached (${data.pages_visited} pages visited).`, "warn");
+    } else if (reason === "stopped") {
+      addLog("Crawl terminated by user.", "warn");
+    }
   } else if (evt === "endpoints_discovered") {
     addLog(`Autonomous crawl completed. Discovered ${data.count} unique normalized endpoints.`);
     document.getElementById("metric-endpoints").textContent = data.count;
     surfaceCount.textContent = `${data.count} Endpoints`;
     renderSurfaces(data.endpoints);
+    setProgress(20);
   } else if (evt === "testing_parameter") {
     const progText = data.total_probes ? `[${data.probes_completed}/${data.total_probes}] ` : '';
     liveActivityDesc.textContent = `${progText}Testing parameter '${data.parameter}' on ${data.method} ${data.url}`;
@@ -302,6 +412,12 @@ function handleScanEvent(evt, data) {
     const progStr = data.total_probes_estimated ? `[${data.probes_completed}/${data.total_probes_estimated}] ` : '';
     liveActivityDesc.textContent = `${progStr}[HTTP ${data.status_code}] ${data.method} ${data.url} (${data.probe_description}) - ${data.elapsed_ms}ms`;
     addLog(`Probe executed: ${data.method} ${data.url} [Param: ${data.parameter}] -> HTTP ${data.status_code} (${data.elapsed_ms}ms)`);
+
+    // Smooth dynamic probing progress (35-75% range)
+    if (data.total_probes_estimated && data.probes_completed) {
+      const fuzzProg = 35 + (data.probes_completed / data.total_probes_estimated) * 40;
+      setProgress(Math.min(fuzzProg, 75));
+    }
   } else if (evt === "ml_scored") {
     if (data.is_anomalous) {
       addLog(`ML Model flagged anomaly: ${data.category} (${data.confidence}% confidence) on ${data.parameter}`, "warn");
@@ -312,18 +428,42 @@ function handleScanEvent(evt, data) {
     appendFindingCard(data);
     updateMetricCounts();
   } else if (evt === "scan_stopped") {
-    stageTitle.textContent = "Scan Process Terminated by User";
+    stageTitle.textContent = "Scan Terminated by User";
     updateStepper("DONE");
+    updateStepStatus(steps.DONE, "Terminated");
     resetScanControls();
     addLog(`Scan stopped. ${data.message} ${data.total_findings || 0} findings recorded before termination.`, "warn");
     fetchFullScan(currentScanId);
   } else if (evt === "scan_completed") {
-    stageTitle.textContent = "Autonomous Security Scan Completed";
+    // Backend processing done — but scan is NOT fully complete yet.
+    // We still need to fetch and render all results in the dashboard.
+    stageTitle.textContent = "Finalizing — Loading results into dashboard...";
     updateStepper("DONE");
-    resetScanControls();
-    liveActivityDesc.textContent = "All findings populated on dashboard.";
+    updateStepStatus(steps.DONE, "Loading...");
+    setProgress(92);
+    liveActivityDesc.textContent = "Fetching complete scan results...";
+    addLog("Backend processing complete. Loading full results...", "info");
+
+    // Fetch full scan data, and only then mark truly complete
+    fetchFullScanAndFinalize(currentScanId);
+  }
+}
+
+async function fetchFullScanAndFinalize(scanId) {
+  try {
+    const res = await fetch(`/api/scan/${scanId}`);
+    const data = await res.json();
+    currentScanData = data;
+    renderFullScanData(data);
+
+    // NOW the scan is truly complete — dashboard has all data
+    markScanFullyComplete();
     addLog("Scan complete. All findings compiled and audit report ready.", "info");
-    fetchFullScan(currentScanId);
+    showToast(`Scan complete — ${data.findings ? data.findings.length : 0} findings detected.`, "success");
+  } catch (err) {
+    addLog(`Error loading final results: ${err.message}`, "warn");
+    showToast("Failed to load scan results.", "error");
+    resetScanControls();
   }
 }
 
@@ -336,11 +476,15 @@ async function fetchFullScan(scanId) {
 
 function renderSurfaces(endpoints) {
   surfaceList.innerHTML = "";
+  if (!endpoints || endpoints.length === 0) {
+    surfaceList.innerHTML = '<div class="empty-state"><div class="empty-state-icon">🔍</div><div class="empty-state-text">No endpoints discovered yet</div></div>';
+    return;
+  }
   endpoints.forEach(ep => {
     const item = document.createElement("div");
     item.className = "surface-item";
     const paramsStr = ep.params && ep.params.length ? `[${ep.params.map(p => p.name).join(", ")}]` : "[]";
-    item.innerHTML = `<span class="method-tag">${ep.method}</span><span>${ep.url}</span><br><small style="color:#64748b">Params: ${paramsStr}</small>`;
+    item.innerHTML = `<span class="method-tag">${ep.method}</span><span>${ep.url}</span><br><small style="color:var(--text-dim)">Params: ${paramsStr}</small>`;
     surfaceList.appendChild(item);
   });
 }
@@ -356,12 +500,20 @@ function renderFullScanData(data) {
   }
   if (data.findings) {
     findingsList.innerHTML = "";
-    data.findings.forEach(f => appendFindingCard(f));
+    if (data.findings.length === 0) {
+      findingsList.innerHTML = '<div class="empty-state"><div class="empty-state-icon">✅</div><div class="empty-state-text">No vulnerabilities detected</div></div>';
+    } else {
+      data.findings.forEach(f => appendFindingCard(f));
+    }
     updateMetricCounts();
   }
 }
 
 function appendFindingCard(f) {
+  // Remove empty state if present
+  const emptyState = findingsList.querySelector(".empty-state");
+  if (emptyState) emptyState.remove();
+
   const card = document.createElement("div");
   card.className = `finding-card severity-${f.severity}`;
   card.dataset.severity = f.severity;
@@ -390,19 +542,19 @@ function appendFindingCard(f) {
     </div>
     
     <!-- Gemini AI Brief Summary & Exact Location Box -->
-    <div class="gemini-reasoning-card" style="margin-top: 0.6rem;">
+    <div class="gemini-reasoning-card" style="margin-top: 0.5rem;">
       <div class="gemini-header">
-        <span>🤖 Google Gemini Cyber-Reasoning Analysis</span>
-        <small style="margin-left:auto; color:#94a3b8; font-size:0.75rem;">${detectedAtStr}</small>
+        <span>🤖 Gemini Cyber-Reasoning Analysis</span>
+        <small style="margin-left:auto; color:var(--text-dim); font-size:0.7rem;">${detectedAtStr}</small>
       </div>
       <div class="gemini-field">
         <strong>Vulnerability Info:</strong> ${briefInfo}
       </div>
       <div class="gemini-field">
-        <strong>Exact Location:</strong> <code style="color:#67e8f9; background:#0b1120; padding:2px 6px; border-radius:4px;">${exactLocation}</code>
+        <strong>Exact Location:</strong> <code style="color:var(--text-main); background:var(--bg-input); padding:2px 6px; border-radius:4px;">${exactLocation}</code>
       </div>
       <div class="gemini-field">
-        <strong>Brief Remediation:</strong> <span style="color:#86efac;">${briefRemediation}</span>
+        <strong>Remediation:</strong> <span style="color:var(--accent-green);">${briefRemediation}</span>
       </div>
     </div>
 
@@ -420,7 +572,7 @@ function appendFindingCard(f) {
     ${f.uncertainty_warning ? `<div class="uncertainty-box"><strong>Uncertainty / False-Positive Warning:</strong> ${f.uncertainty_warning}</div>` : ''}
     
     <div class="finding-actions">
-      <button class="btn btn-secondary btn-sm" onclick="openPatchModal('${f.id}')">🛠️ Autonomous Staging Patch & Regression</button>
+      <button class="btn btn-secondary btn-sm" onclick="openPatchModal('${f.id}')" aria-label="Open staging patch for ${f.vuln_type}">🛠️ Staging Patch & Regression</button>
     </div>
   `;
 
@@ -431,12 +583,11 @@ function updateMetricCounts() {
   const cards = document.querySelectorAll(".finding-card");
   document.getElementById("metric-findings").textContent = cards.length;
   
-  let crit = 0, high = 0, med = 0;
+  let crit = 0, high = 0;
   cards.forEach(c => {
     const sev = c.dataset.severity;
     if (sev === "CRITICAL") crit++;
     else if (sev === "HIGH") high++;
-    else if (sev === "MEDIUM") med++;
   });
   document.getElementById("metric-critical").textContent = crit;
   document.getElementById("metric-high").textContent = high;
@@ -535,7 +686,8 @@ copyPatchBtn.addEventListener("click", () => {
   if (!textToCopy) return;
 
   navigator.clipboard.writeText(textToCopy).then(() => {
-    copyPatchBtn.textContent = "✅ Copied to Clipboard!";
+    copyPatchBtn.textContent = "✅ Copied!";
+    showToast("Patch copied to clipboard.", "success");
     setTimeout(() => {
       copyPatchBtn.textContent = "📋 Copy Patch";
     }, 2000);
@@ -547,7 +699,7 @@ copyPatchBtn.addEventListener("click", () => {
     textArea.select();
     document.execCommand("copy");
     document.body.removeChild(textArea);
-    copyPatchBtn.textContent = "✅ Copied to Clipboard!";
+    copyPatchBtn.textContent = "✅ Copied!";
     setTimeout(() => {
       copyPatchBtn.textContent = "📋 Copy Patch";
     }, 2000);
@@ -571,13 +723,13 @@ applyPatchBtn.addEventListener("click", async () => {
     });
     const data = await res.json();
     if (data.success) {
-      alert(`Patch successfully applied to local staging file!\n${data.message}`);
+      showToast("Patch applied to staging file successfully.", "success");
       verifyRegressionBtn.disabled = false;
     } else {
-      alert(`Error applying patch: ${data.message}`);
+      showToast(`Error applying patch: ${data.message}`, "error");
     }
   } catch (err) {
-    alert(`Request error: ${err.message}`);
+    showToast(`Request error: ${err.message}`, "error");
   }
 });
 
@@ -621,34 +773,38 @@ verifyRegressionBtn.addEventListener("click", async () => {
     if (data.verdict === "FIXED") {
       const fixedCountEl = document.getElementById("metric-fixed");
       fixedCountEl.textContent = parseInt(fixedCountEl.textContent || "0") + 1;
+      showToast("Vulnerability verified as FIXED!", "success");
+    } else {
+      showToast(`Verification verdict: ${data.verdict}`, "warn");
     }
   } catch (err) {
     verdictBanner.textContent = "ERROR";
     verdictExplanation.textContent = err.message;
+    showToast(`Regression test error: ${err.message}`, "error");
   }
 });
 
 // Scan History Modal with IST Timestamps
 historyBtn.addEventListener("click", async () => {
   historyModal.style.display = "flex";
-  historyList.innerHTML = "Loading scan history...";
+  historyList.innerHTML = '<div class="empty-state"><div class="empty-state-icon">⏳</div><div class="empty-state-text">Loading scan history...</div></div>';
   try {
     const res = await fetch("/api/scans");
     const scans = await res.json();
     if (!scans.length) {
-      historyList.innerHTML = "<p>No previous scans found.</p>";
+      historyList.innerHTML = '<div class="empty-state"><div class="empty-state-icon">📂</div><div class="empty-state-text">No previous scans found</div></div>';
       return;
     }
     historyList.innerHTML = "";
     scans.forEach(s => {
       const item = document.createElement("div");
       item.className = "surface-item";
-      item.style.marginBottom = "0.75rem";
+      item.style.marginBottom = "0.6rem";
       item.style.cursor = "pointer";
       item.innerHTML = `
         <strong>${s.target_url}</strong> <span class="badge">${s.status}</span>
-        <br><small style="color:#94a3b8">Scan ID: ${s.id} | Started (IST): ${formatIST(s.started_at)}</small>
-        <br><small style="color:#38bdf8">Findings: ${s.finding_count || 0} | Endpoints: ${s.endpoint_count || 0}</small>
+        <br><small style="color:var(--text-dim)">Scan ID: ${s.id} | Started: ${formatIST(s.started_at)}</small>
+        <br><small style="color:var(--text-muted)">Findings: ${s.finding_count || 0} | Endpoints: ${s.endpoint_count || 0}</small>
       `;
       item.onclick = () => {
         historyModal.style.display = "none";
@@ -658,13 +814,14 @@ historyBtn.addEventListener("click", async () => {
         resultsLayout.style.display = "grid";
         exportGroup.style.display = "flex";
         stageTitle.textContent = `Historical Audit: ${s.target_url} (${s.status})`;
-        updateStepper("DONE");
+        markAllStepsComplete();
+        setProgress(100);
         fetchFullScan(s.id);
       };
       historyList.appendChild(item);
     });
   } catch (e) {
-    historyList.innerHTML = `<p>Error loading history: ${e.message}</p>`;
+    historyList.innerHTML = `<div class="empty-state"><div class="empty-state-icon">⚠️</div><div class="empty-state-text">Error loading history: ${e.message}</div></div>`;
   }
 });
 
@@ -702,34 +859,34 @@ modelInfoBtn.addEventListener("click", async () => {
       <!-- Top Metrics Cards -->
       <div class="model-stats-grid">
         <div class="stat-box">
-          <div class="stat-number" style="color:#34d399;">${acc}%</div>
+          <div class="stat-number" style="color:var(--accent-green);">${acc}%</div>
           <div class="stat-label">Test Accuracy</div>
         </div>
         <div class="stat-box">
-          <div class="stat-number" style="color:#38bdf8;">${weightedF1}</div>
+          <div class="stat-number">${weightedF1}</div>
           <div class="stat-label">Weighted F1</div>
         </div>
         <div class="stat-box">
-          <div class="stat-number" style="color:#fbbf24;">${macroF1}</div>
+          <div class="stat-number" style="color:var(--accent-yellow);">${macroF1}</div>
           <div class="stat-label">Macro F1</div>
         </div>
         <div class="stat-box">
-          <div class="stat-number" style="color:#a78bfa;">${numClasses}</div>
+          <div class="stat-number">${numClasses}</div>
           <div class="stat-label">Learned Classes</div>
         </div>
         <div class="stat-box">
-          <div class="stat-number" style="color:#67e8f9;">${numSamples}</div>
+          <div class="stat-number">${numSamples}</div>
           <div class="stat-label">Holdout Test Set</div>
         </div>
       </div>
 
       <!-- Training Dataset Metadata -->
-      <div style="background:#080d1a; border:1px solid #1e293b; border-radius:6px; padding:0.75rem 1rem; margin-bottom:1rem; font-family:'JetBrains Mono', monospace; font-size:0.8rem;">
-        <div style="display:flex; justify-content:space-between; margin-bottom:0.3rem;">
+      <div style="background:var(--bg-input); border:1px solid var(--border-color); border-radius:6px; padding:0.65rem 0.85rem; margin-bottom:0.85rem; font-family:'JetBrains Mono', monospace; font-size:0.75rem;">
+        <div style="display:flex; justify-content:space-between; margin-bottom:0.25rem;">
           <span><strong>Dataset Composition:</strong> Unified (Hugging Face + OWASP Juice Shop)</span>
-          <span style="color:#38bdf8;">59,969 Total Records</span>
+          <span style="color:var(--text-muted);">59,969 Total Records</span>
         </div>
-        <div style="display:flex; justify-content:space-between; color:#94a3b8; font-size:0.75rem;">
+        <div style="display:flex; justify-content:space-between; color:var(--text-dim); font-size:0.7rem;">
           <span>• Hugging Face vyykaaa/dataset-v2: 59,868 records</span>
           <span>• OWASP Juice Shop: 101 records</span>
           <span>• Split: 70% Train / 15% Val / 15% Test</span>
@@ -744,7 +901,7 @@ modelInfoBtn.addEventListener("click", async () => {
       html += `
         <div class="section-subtitle">
           <span>🧪 Zero-Shot & Out-of-Distribution Generalization Benchmark:</span>
-          <span style="color:#34d399; margin-left:0.5rem;">${gen.passed || 0} / ${gen.total_test_cases || 10} Passed (${scorePct}%)</span>
+          <span style="color:var(--accent-green); margin-left:0.5rem;">${gen.passed || 0} / ${gen.total_test_cases || 10} Passed (${scorePct}%)</span>
         </div>
         <div class="table-container">
           <table class="model-table">
@@ -764,8 +921,8 @@ modelInfoBtn.addEventListener("click", async () => {
                 return `
                   <tr>
                     <td><strong>${r.test_name || 'Test Case'}</strong></td>
-                    <td><code style="color:#94a3b8;">${r.expected_category || 'N/A'}</code></td>
-                    <td><code style="color:${statusStr === 'PASS' ? '#67e8f9' : '#f87171'};">${r.predicted_category || 'N/A'}</code></td>
+                    <td><code style="color:var(--text-dim);">${r.expected_category || 'N/A'}</code></td>
+                    <td><code style="color:${statusStr === 'PASS' ? 'var(--accent-green)' : '#F87171'};">${r.predicted_category || 'N/A'}</code></td>
                     <td>${confStr}</td>
                     <td><span class="${statusStr === 'PASS' ? 'badge-pass' : 'badge-fail'}">${statusStr}</span></td>
                   </tr>
@@ -821,7 +978,7 @@ modelInfoBtn.addEventListener("click", async () => {
 
     modelMetricsContent.innerHTML = html;
   } catch (e) {
-    modelMetricsContent.innerHTML = `<p style="color:#f87171;">Error loading model info: ${e.message}</p>`;
+    modelMetricsContent.innerHTML = `<div class="empty-state"><div class="empty-state-icon">⚠️</div><div class="empty-state-text">Error loading model info: ${e.message}</div></div>`;
   }
 });
 

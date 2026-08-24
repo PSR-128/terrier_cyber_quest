@@ -46,9 +46,9 @@ class ScopeController:
         target_url: str,
         allowed_domains: Optional[List[str]] = None,
         allow_subdomains: bool = True,
-        max_depth: int = 3,
-        max_pages: int = 50,
-        max_duration_sec: int = 300
+        max_depth: int = 0,
+        max_pages: int = 0,
+        max_duration_sec: int = 600
     ):
         self.target_url = normalize_url(target_url)
         parsed = urlparse(self.target_url)
@@ -63,8 +63,13 @@ class ScopeController:
             self.allowed_domains.add(self.base_domain)
             
         self.allow_subdomains = allow_subdomains
-        self.max_depth = max_depth
-        self.max_pages = max_pages
+
+        # Interpret 0 as unlimited — use high sentinel values internally
+        self.depth_limited = max_depth > 0
+        self.pages_limited = max_pages > 0
+        self.max_depth = max_depth if max_depth > 0 else 999
+        self.max_pages = max_pages if max_pages > 0 else 100000
+
         self.max_duration_sec = max_duration_sec
         self.external_links_intercepted: Set[str] = set()
 

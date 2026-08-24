@@ -224,6 +224,26 @@ class WebCrawler:
                 except Exception as ex:
                     self._emit("crawl_error", {"url": norm_current_url, "error": str(ex)})
 
+        # Determine crawl completion reason
+        if self.stop_checker and self.stop_checker():
+            crawl_reason = "stopped"
+        elif (time.time() - start_time) > self.scope.max_duration_sec:
+            crawl_reason = "duration_limit"
+        elif len(self.visited_urls) >= self.scope.max_pages and queue:
+            crawl_reason = "page_limit"
+        elif not queue:
+            crawl_reason = "exhausted"
+        else:
+            crawl_reason = "unknown"
+
+        self._emit("crawl_completed", {
+            "reason": crawl_reason,
+            "pages_visited": len(self.visited_urls),
+            "pages_limited": self.scope.pages_limited,
+            "depth_limited": self.scope.depth_limited,
+            "queue_remaining": len(queue)
+        })
+
         # Deduplicate endpoints deterministically by normalized URL, method, and param keys
         unique_map = {}
         for ep in self.discovered_endpoints:

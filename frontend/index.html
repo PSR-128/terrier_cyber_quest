@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Terrier Cyber Quest — AI Cyber-Reasoning Platform</title>
-  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="styles.css?v=3.0">
   <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 </head>
 <body>
@@ -19,8 +19,8 @@
     </div>
     <div class="nav-actions">
       <span class="auth-notice">⚠️ AUTHORIZED AUDIT MODE (IST: UTC+05:30)</span>
-      <button class="btn btn-secondary" id="history-btn">📁 Scan History</button>
-      <button class="btn btn-secondary" id="model-info-btn">🧠 ML Model Info</button>
+      <button class="btn btn-secondary" id="history-btn" aria-label="View scan history">📁 Scan History</button>
+      <button class="btn btn-secondary" id="model-info-btn" aria-label="View ML model information">🧠 ML Model Info</button>
     </div>
   </header>
 
@@ -52,11 +52,13 @@
           </div>
           <div class="form-group">
             <label for="max-depth">Max Crawl Depth</label>
-            <input type="number" id="max-depth" value="3" min="1" max="10">
+            <input type="number" id="max-depth" value="0" min="0" max="100" placeholder="0 = Unlimited">
+            <span class="form-hint">0 = unlimited depth</span>
           </div>
           <div class="form-group">
             <label for="max-pages">Max Pages</label>
-            <input type="number" id="max-pages" value="30" min="1" max="100">
+            <input type="number" id="max-pages" value="0" min="0" max="100000" placeholder="0 = Unlimited">
+            <span class="form-hint">0 = unlimited pages</span>
           </div>
           <div class="form-group">
             <label for="bearer-token">Bearer Token</label>
@@ -111,27 +113,38 @@
         <div class="step" id="step-crawl">
           <div class="step-num">1</div>
           <div class="step-label">Web Crawl & Discovery</div>
+          <div class="step-status">Pending</div>
         </div>
         <div class="step" id="step-static">
           <div class="step-num">2</div>
           <div class="step-label">Static Analysis</div>
+          <div class="step-status">Pending</div>
         </div>
         <div class="step" id="step-fuzz">
           <div class="step-num">3</div>
           <div class="step-label">Dynamic Probing</div>
+          <div class="step-status">Pending</div>
         </div>
         <div class="step" id="step-ml">
           <div class="step-num">4</div>
           <div class="step-label">ML Classification</div>
+          <div class="step-status">Pending</div>
         </div>
         <div class="step" id="step-reason">
           <div class="step-num">5</div>
           <div class="step-label">Gemini & CVSS v4.0</div>
+          <div class="step-status">Pending</div>
         </div>
         <div class="step" id="step-done">
           <div class="step-num">6</div>
           <div class="step-label">Report & Remediation</div>
+          <div class="step-status">Pending</div>
         </div>
+      </div>
+
+      <!-- Smooth Progress Bar -->
+      <div class="progress-track">
+        <div class="progress-fill" id="progress-fill"></div>
       </div>
 
       <div class="live-log-box" id="live-log">
@@ -282,6 +295,9 @@
     </div>
   </div>
 
-  <script src="app.js?v=2.2"></script>
+  <!-- Toast Container -->
+  <div class="toast-container" id="toast-container"></div>
+
+  <script src="app.js?v=2.3"></script>
 </body>
 </html>

@@ -15,7 +15,7 @@ def run_staging_app():
 def run_main_app():
     from backend.api.app import app as main_app
     print("\n" + "="*70)
-    print(" 🛡️  TERRIER CYBER QUEST — AI CYBER-REASONING PLATFORM")
+    print(" [*] TERRIER CYBER QUEST -- AI CYBER-REASONING PLATFORM")
     print("="*70)
     print(" Dashboard & API Server: http://127.0.0.1:8000")
     print(" Staging Target (Local): http://127.0.0.1:5000")
