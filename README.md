@@ -118,5 +118,3 @@ pytest tests/ -v
 
 ---
 
-## 🛡️ Responsible Security & Legal Notice
-This system is intended exclusively for authorized vulnerability assessment, educational demonstration, and cybersecurity competition environments. Only scan targets for which you have explicit, documented authorization.
